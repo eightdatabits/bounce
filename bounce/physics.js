@@ -1,5 +1,5 @@
 function Physics(dt) {
-    this.gravity = [0.0, 0.0];
+    this.gravity = Vector(0.0, 0.0);
     this.objects = [];
     this.dt = dt;
 
@@ -21,17 +21,17 @@ function Physics(dt) {
                     continue;
                 }
 
-                var dist = distance(this.objects[i], this.objects[j]);
+                var dist = distance(this.objects[i].getPosition(), this.objects[j].getPosition());
 
                 if( dist <= (this.objects[i].getBounds().getRadius() + this.objects[j].getBounds().getRadius())) {
-                    var newvel = elasticCollision(this.objects[i], this.objects[j]);
+                    var newvels = elasticCollision(this.objects[i], this.objects[j]);
                     if( this.objects[i].isStatic() == false ) {
-                        this.objects[i].setVelocity(newvel[0]);
+                        this.objects[i].setVelocity(newvels[0]);
                     }
                     if( this.objects[j].isStatic() == false ) {
-                        this.objects[j].setVelocity(newvel[1]);
+                        this.objects[j].setVelocity(newvels[1]);
                     }
-                    console.log('collision: '+newvel);
+                    console.log('collision: '+newvels);
                 }
             };
         };
@@ -39,87 +39,64 @@ function Physics(dt) {
         for( var i = 0; i < this.objects.length; i++ ){
             // Update velocities according to gravity
             var vel = this.objects[i].getVelocity();
-            vel[0] = vel[0] + this.gravity[0] * this.dt;
-            vel[1] = vel[1] + this.gravity[1] * this.dt;
+            vel.add( this.gravity.scale(this.dt) );
             this.objects[i].setVelocity(vel);
 
             // Update positions according to velocities
             var pos = this.objects[i].getPosition();
-            pos[0] = pos[0] + vel[0] * this.dt;
-            pos[1] = pos[1] + vel[1] * this.dt;
+            pos.add( vel.scale(this.dt) );
             this.objects[i].setPosition(pos);
 
-            if( (pos[0] - this.objects[i].getBounds().getRadius() <= 0) &&
-                (vel[0] < 0) ) {
-                vel[0] = -1 * vel[0];
+            if( (pos.x - this.objects[i].getBounds().getRadius() <= 0) &&
+                (vel.x < 0) ) {
+                vel.x = -1 * vel.x;
             }
 
-            if( (pos[0] + this.objects[i].getBounds().getRadius() >= width) &&
-                (vel[0] > 0)) {
-                vel[0] = -1 * vel[0];
+            if( (pos.x + this.objects[i].getBounds().getRadius() >= width) &&
+                (vel.x > 0)) {
+                vel.x = -1 * vel.x;
             }
 
-            if( (pos[1] - this.objects[i].getBounds().getRadius() <= 0) &&
-                (vel[1] < 0) ) {
-                vel[1] = -1 * vel[1];
+            if( (pos.y - this.objects[i].getBounds().getRadius() <= 0) &&
+                (vel.y < 0) ) {
+                vel.y = -1 * vel.y;
             }
 
-            if( (pos[1] + this.objects[i].getBounds().getRadius() >= height) &&
-                (vel[1] > 0)) {
-                vel[1] = -1 * vel[1];
+            if( (pos.y + this.objects[i].getBounds().getRadius() >= height) &&
+                (vel.y > 0)) {
+                vel.y = -1 * vel.y;
             }
         };
     }
 
-    function distance(object1, object2) {
-        var obj1_pos = object1.getPosition();
-        var obj1_x = obj1_pos[0];
-        var obj1_y = obj1_pos[1];
-        var obj2_pos = object2.getPosition();
-        var obj2_x = obj2_pos[0];
-        var obj2_y = obj2_pos[1];
-
-        return Math.sqrt(Math.pow(obj1_x - obj2_x, 2) + Math.pow(obj1_y - obj2_y, 2));
-    }
-
-    function vectLength(vector) {
-        return Math.sqrt(Math.pow(vector[0],2) + Math.pow(vector[1],2));
-    }
-
     function elasticCollision(object1, object2) {
         var obj1_pos = object1.getPosition();
-        var obj1_x = obj1_pos[0];
-        var obj1_y = obj1_pos[1];
         var obj2_pos = object2.getPosition();
-        var obj2_x = obj2_pos[0];
-        var obj2_y = obj2_pos[1];
         var obj1_vel = object1.getVelocity();
-        var obj1_velx = obj1_vel[0];
-        var obj1_vely = obj1_vel[1];
         var obj2_vel = object2.getVelocity();
-        var obj2_velx = obj2_vel[0];
-        var obj2_vely = obj2_vel[1];
         var obj1_mass = object1.getMass();
         var obj2_mass = object2.getMass();
 
-        var v1diff = [obj1_velx - obj2_velx, obj1_vely - obj2_vely];
-        var v2diff = [obj2_velx - obj1_velx, obj2_vely - obj1_vely];
-        var pos1diff = [obj1_x - obj2_x, obj1_y - obj2_y];
-        var pos2diff = [obj2_x - obj1_x, obj2_y - obj1_y];
-        var v1diffdot = v1diff[0] * pos1diff[0] + v1diff[1] * pos1diff[1];
-        var v2diffdot = v2diff[0] * pos2diff[0] + v2diff[1] * pos2diff[1];
+        var v1diff = subtract(obj1_vel, obj2_vel);
+        var v2diff = subtract(obj2_vel, obj1_vel);
+        var pos1diff = subtract(obj1_pos, obj2_pos);
+        var pos2diff = subtract(obj2_pos, obj1_pos);
+        var v1diffdot = v1diff.dot(pos1diff);
+        var v2diffdot = v2diff.dot(pos2diff);
 
-        var pos1length = vectLength(pos1diff);
-        var pos2length = vectLength(pos2diff);
+        var pos1length = pos1diff.len();
+        var pos2length = pos2diff.len();
 
         var mass1 = 2 * obj1_mass / (obj1_mass + obj2_mass);
         var mass2 = 2 * obj2_mass / (obj1_mass + obj2_mass);
 
-        var newv1x = obj1_velx - mass1 * v1diffdot / Math.pow(pos1length,2) * (obj1_x - obj2_x);
-        var newv1y = obj1_vely - mass1 * v1diffdot / Math.pow(pos1length,2) * (obj1_y - obj2_y);
-        var newv2x = obj2_velx - mass2 * v2diffdot / Math.pow(pos2length,2) * (obj2_x - obj1_x);
-        var newv2y = obj2_vely - mass2 * v2diffdot / Math.pow(pos2length,2) * (obj2_y - obj1_y);
+        var newv1 = subtract(obj1_vel, subtract(obj1_pos, obj2_pos).scale(mass1 * v1diffdot / Math.pow(pos1length,2)));
+        //var newv1x = obj1_velx - mass1 * v1diffdot / Math.pow(pos1length,2) * (obj1_x - obj2_x);
+        //var newv1y = obj1_vely - mass1 * v1diffdot / Math.pow(pos1length,2) * (obj1_y - obj2_y);
+        var newv2 = subtract(obj2_vel, subtract(obj2_pos, obj1_pos).scale(mass2 * v2diffdot / Math.pow(pos2length,2)));
+        //var newv2x = obj2_velx - mass2 * v2diffdot / Math.pow(pos2length,2) * (obj2_x - obj1_x);
+        //var newv2y = obj2_vely - mass2 * v2diffdot / Math.pow(pos2length,2) * (obj2_y - obj1_y);
 
-        return [[newv1x,newv1y], [newv2x,newv2y]];
+        return [newv1, newv2];
     }
 }
