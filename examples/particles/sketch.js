@@ -1,37 +1,39 @@
 
 function Ball(position, velocity, mass, bounds ) {
-    PhysObject.call( this, position, velocity, mass, false, bounds );
+    bounce.Thing.call( this, position, velocity, mass, false, bounds );
 
     this.draw = function() {
         fill(255);
-        ellipse(this.position.x, this.position.y, 2*this.bounds.getRadius());
+        ellipse(this.position.x, this.position.y, 2*this.bounds.radius);
     }
 }
 
 
-var phys;
+var physeng;
 var balls = new Array();
 
 function setup() {
     createCanvas(640, 480);
     background(0);
-    phys = new Physics(1);
-    phys.setGravity(new Vector(0,0.1));
+    physeng = new bounce.Engine();
+    physeng.dt = 1.0;
+    physeng.gravity = new bounce.Vector2d(0,0.1);
 
     for( var i = 0; i < 20; i++ ) {
-        var pos = new Vector(random(width), random(height));
-        var vel = new Vector(random(5), random(5));
-        var ball = new Ball(pos, vel, 1, new PhysCircleBound(10));
+        var pos = new bounce.Vector2d(random(width), random(height));
+        var vel = new bounce.Vector2d(random(5), random(5));
+        var ball = new Ball(pos, vel, 1, new bounce.CircleBound(10));
         balls.push(ball);
         balls[i].draw();
-        phys.registerObject(balls[i]);
+        physeng.registerThing(balls[i]);
+        console.log(ball);
     }
 }
 
 function draw() {
     frameRate(30);
     background(0);
-    phys.tick();
+    physeng.tick();
 
     for( var i = 0; i < balls.length; i++ ) {
         balls[i].draw();
