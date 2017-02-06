@@ -1,7 +1,7 @@
 var bounce = bounce || {}; // Create the bounce namespace if it hasn't already been created
 
 bounce.Engine = function() {
-    this.gravity = bounce.Vector2d(0.0, 0.0);
+    this.gravity = new bounce.Vector2d(0.0, 0.0);
     this.dt = 1.0;
 
     var things = [];
@@ -25,7 +25,8 @@ bounce.Engine = function() {
                 }
 
                 var dist = things[i].position.distance(things[j].position);
-                if( dist <= (things[i].bounds.radius + things[j].bounds.radius)) {
+                if( dist <= (things[i].bounds.radius + things[j].bounds.radius) &&
+                    isColliding(things[i], things[j])) {
 
                     var newvels = elasticCollision(things[i], things[j]);
 
@@ -94,5 +95,18 @@ bounce.Engine = function() {
         var newv2 = thing2.velocity.clone().subtract(thing2.position.clone().subtract(thing1.position).scale(mass2 * v2diffdot / Math.pow(pos2length,2)));
 
         return [newv1, newv2];
+    }
+
+    function isColliding(thing1, thing2) {
+
+        var centerline_norm = thing2.position.clone().subtract(thing1.position);
+        centerline_norm.scale(1/centerline_norm.len());
+        var relative_vel = thing1.velocity.clone().subtract(thing2.velocity);
+
+        var projection = relative_vel.dot(centerline_norm);
+console.log(relative_vel);
+console.log(centerline_norm);
+console.log(projection);
+        return (projection > 0);
     }
 }
